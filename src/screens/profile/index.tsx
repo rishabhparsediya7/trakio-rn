@@ -5,6 +5,7 @@ import {Asset} from 'react-native-image-picker';
 import AccountOption from '@organisms/accountOptions';
 import AppText from '@atoms/AppText';
 import ImageUploader from '@molecules/imageUploader';
+import Header from '@organisms/Header';
 import {useAuth} from '../../providers/AuthProvider';
 import {darkTheme, lightTheme} from '../../providers/Theme';
 import {useTheme} from '../../providers/ThemeContext';
@@ -14,7 +15,7 @@ import {
 } from '../../services/userService';
 import {DeviceInfo, getDeviceInfo} from '../../utils/deviceInfo';
 const Profile = ({navigation}: {navigation: any}) => {
-  const {signOut, user, setUser} = useAuth();
+  const {user, setUser} = useAuth();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,10 +35,34 @@ const Profile = ({navigation}: {navigation: any}) => {
       options: ['Edit Personal Information'],
     },
     {
-      icon: 'credit-card',
-      label: 'Payment Methods',
-      onPress: () => navigation.navigate('EditPaymentMethods'),
-      options: ['Add Payment Method'],
+      icon: 'list',
+      label: 'Personal Expenses',
+      onPress: () => navigation.navigate('ExpenseList'),
+      options: ['Open Personal Expenses'],
+    },
+    {
+      icon: 'plus-circle',
+      label: 'Quick Add',
+      onPress: () => navigation.navigate('QuickAddExpense'),
+      options: ['Add Personal Expense'],
+    },
+    {
+      icon: 'download',
+      label: 'Reports & Export',
+      onPress: () => navigation.navigate('ExportData'),
+      options: ['Open Reports & Export'],
+    },
+    {
+      icon: 'wallet',
+      label: 'Monthly Budget',
+      onPress: () => navigation.navigate('Action', {type: 'budget'}),
+      options: ['Update Monthly Budget'],
+    },
+    {
+      icon: 'trending-up',
+      label: 'Monthly Income',
+      onPress: () => navigation.navigate('Action', {type: 'income'}),
+      options: ['Update Monthly Income'],
     },
     {
       icon: 'shield',
@@ -139,60 +164,68 @@ const Profile = ({navigation}: {navigation: any}) => {
   );
 
   return (
-    <ScrollView
-      contentContainerStyle={{paddingBottom: 12}}
-      showsVerticalScrollIndicator={false}
-      style={styles.container}>
-      <View style={styles.header}>
-        <ImageUploader
-          onImageSelected={handleImageSelected}
-          selectedImage={selectedImage}
-          isProfilePic
-          showUploadIcon
-          profilePicture={profilePicture}
-        />
-        <AppText variant="h3" weight="bold" style={styles.name}>
-          {user?.name || name}
-        </AppText>
-        <AppText variant="h6" color={colors.mutedText} style={styles.email}>
-          {user?.email || email}
-        </AppText>
-        <AppText variant="lg" weight="medium" style={styles.phone}>
-          {user?.phoneNumber}
-        </AppText>
-      </View>
-
-      <AppText variant="h6" weight="semiBold" style={styles.sectionTitle}>
-        Account Settings
-      </AppText>
-      <FlatList
-        data={accountOptionsData}
-        scrollEnabled={false}
-        renderItem={({item}) => (
-          <AccountOption
-            icon={item.icon}
-            label={item.label}
-            onPress={item.onPress}
-            options={item.options}
-          />
-        )}
-        keyExtractor={item => item.label}
+    <View style={styles.container}>
+      <Header
+        title="Profile"
+        showBackButton={navigation.canGoBack()}
+        showDrawerButton={!navigation.canGoBack()}
+        showImage={false}
       />
+      <ScrollView
+        contentContainerStyle={{paddingBottom: 12}}
+        showsVerticalScrollIndicator={false}
+        style={styles.container}>
+        <View style={styles.header}>
+          <ImageUploader
+            onImageSelected={handleImageSelected}
+            selectedImage={selectedImage}
+            isProfilePic
+            showUploadIcon
+            profilePicture={profilePicture}
+          />
+          <AppText variant="h3" weight="bold" style={styles.name}>
+            {user?.name || name}
+          </AppText>
+          <AppText variant="h6" color={colors.mutedText} style={styles.email}>
+            {user?.email || email}
+          </AppText>
+          <AppText variant="lg" weight="medium" style={styles.phone}>
+            {user?.phoneNumber}
+          </AppText>
+        </View>
 
-      <View style={styles.versionSection}>
-        <AppText variant="md" color={colors.mutedText}>
-          {`v${deviceInfo?.versionName || ''} (${
-            deviceInfo?.versionCode || ''
-          })`}
+        <AppText variant="h6" weight="semiBold" style={styles.sectionTitle}>
+          Account & Tools
         </AppText>
-      </View>
+        <FlatList
+          data={accountOptionsData}
+          scrollEnabled={false}
+          renderItem={({item}) => (
+            <AccountOption
+              icon={item.icon}
+              label={item.label}
+              onPress={item.onPress}
+              options={item.options}
+            />
+          )}
+          keyExtractor={item => item.label}
+        />
 
-      <View style={styles.madeBySection}>
-        <AppText variant="sm" color={colors.mutedText}>
-          Made with ❤️ by Rishabh Parsediya
-        </AppText>
-      </View>
-    </ScrollView>
+        <View style={styles.versionSection}>
+          <AppText variant="md" color={colors.mutedText}>
+            {`v${deviceInfo?.versionName || ''} (${
+              deviceInfo?.versionCode || ''
+            })`}
+          </AppText>
+        </View>
+
+        <View style={styles.madeBySection}>
+          <AppText variant="sm" color={colors.mutedText}>
+            Made with love by Rishabh Parsediya
+          </AppText>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 

@@ -30,44 +30,66 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
     bottomSheetModalRef.current?.present();
   };
 
-  const menuItems = [
+  const navigateToTab = (
+    screen: 'Balances' | 'Friends' | 'Groups' | 'Activity' | 'Profile',
+  ) => {
+    props.navigation.closeDrawer();
+    props.navigation.navigate('MainTabs', {screen});
+  };
+
+  const primaryItems = [
     {
-      label: 'Home',
-      icon: 'home-outline',
-      onPress: () => {
-        props.navigation.closeDrawer();
-        props.navigation.navigate('MainTabs', {screen: 'Home'});
-      },
+      label: 'Balances',
+      icon: 'wallet-outline',
+      onPress: () => navigateToTab('Balances'),
     },
+    {
+      label: 'Friends',
+      icon: 'people-outline',
+      onPress: () => navigateToTab('Friends'),
+    },
+    {
+      label: 'Groups',
+      icon: 'people-outline',
+      onPress: () => navigateToTab('Groups'),
+    },
+    {
+      label: 'Activity',
+      icon: 'pulse-outline',
+      onPress: () => navigateToTab('Activity'),
+    },
+  ];
+
+  const utilityItems = [
     {
       label: 'New Split',
       icon: 'git-compare-outline',
       onPress: () => props.navigation.navigate('CreateSplitExpense'),
     },
     {
-      label: 'Settlements',
-      icon: 'wallet-outline',
+      label: 'Shared Expenses',
+      icon: 'receipt-outline',
       onPress: () => props.navigation.navigate('SplitExpenseList'),
     },
     {
-      label: 'Groups',
-      icon: 'people-outline',
-      onPress: () => props.navigation.navigate('GroupList'),
-    },
-    {
-      label: 'Add Friends',
-      icon: 'person-add-outline',
-      onPress: () => props.navigation.navigate('AddFriends'),
-    },
-    {
-      label: 'Notifications',
-      icon: 'notifications-outline',
-      onPress: () => props.navigation.navigate('Notifications'),
+      label: 'Personal Expenses',
+      icon: 'list-outline',
+      onPress: () => props.navigation.navigate('ExpenseList'),
     },
     {
       label: 'Reports',
       icon: 'download-outline',
       onPress: () => props.navigation.navigate('ExportData'),
+    },
+    {
+      label: 'Budget',
+      icon: 'pie-chart-outline',
+      onPress: () => props.navigation.navigate('Action', {type: 'budget'}),
+    },
+    {
+      label: 'Income',
+      icon: 'cash-outline',
+      onPress: () => props.navigation.navigate('Action', {type: 'income'}),
     },
   ];
 
@@ -122,6 +144,18 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
         drawerItemsContainer: {
           flex: 1,
           paddingTop: 10,
+          gap: 16,
+        },
+        section: {
+          gap: 4,
+        },
+        sectionTitle: {
+          fontSize: 12,
+          letterSpacing: 1,
+          textTransform: 'uppercase',
+          color: colors.mutedText,
+          marginHorizontal: 14,
+          marginBottom: 4,
         },
         drawerItem: {
           flexDirection: 'row',
@@ -237,10 +271,10 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
           </View>
           <View style={{flex: 1}}>
             <AppText weight="bold" style={{color: '#fff', fontSize: 15}}>
-              Quick Add
+              Quick Add Expense
             </AppText>
             <AppText style={{color: 'rgba(255,255,255,0.75)', fontSize: 11}}>
-              Add expense magically
+              Keep personal tracking under the hood
             </AppText>
           </View>
           <Ionicons name="add-circle" size={24} color="rgba(255,255,255,0.9)" />
@@ -252,15 +286,35 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
         contentContainerStyle={{paddingTop: 0}}
         showsVerticalScrollIndicator={false}>
         <View style={styles.drawerItemsContainer}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.drawerItem}
-              onPress={item.onPress}>
-              <Ionicons name={item.icon} size={22} color={colors.text} />
-              <AppText style={styles.drawerItemLabel}>{item.label}</AppText>
-            </TouchableOpacity>
-          ))}
+          <View style={styles.section}>
+            <AppText weight="semiBold" style={styles.sectionTitle}>
+              Split Together
+            </AppText>
+            {primaryItems.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.drawerItem}
+                onPress={item.onPress}>
+                <Ionicons name={item.icon} size={22} color={colors.text} />
+                <AppText style={styles.drawerItemLabel}>{item.label}</AppText>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <AppText weight="semiBold" style={styles.sectionTitle}>
+              Utilities
+            </AppText>
+            {utilityItems.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.drawerItem}
+                onPress={item.onPress}>
+                <Ionicons name={item.icon} size={22} color={colors.text} />
+                <AppText style={styles.drawerItemLabel}>{item.label}</AppText>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </DrawerContentScrollView>
 

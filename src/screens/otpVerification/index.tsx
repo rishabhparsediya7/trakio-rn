@@ -42,6 +42,12 @@ const OtpVerificationScreen = ({navigation, route}) => {
     }
   }, [timer]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      authNavigation.navigate('DrawerNavigator');
+    }
+  }, [authNavigation, isAuthenticated]);
+
   const handleOtpChange = (value, index) => {
     if (value && !/^\d*$/.test(value)) return; // only allow digits or empty string
 
@@ -88,11 +94,6 @@ const OtpVerificationScreen = ({navigation, route}) => {
     } finally {
       setLoading(false);
     }
-    useEffect(() => {
-      if (isAuthenticated) {
-        authNavigation.navigate('Home');
-      }
-    }, [isAuthenticated]);
   };
 
   const handleResend = async () => {

@@ -239,7 +239,11 @@ const GroupList = () => {
   if (loading) {
     return (
       <View style={[styles.screen, {backgroundColor: colors.background}]}>
-        <Header title="Groups" showBackButton />
+        <Header
+          title="Groups"
+          showBackButton={navigation.canGoBack()}
+          showDrawerButton={!navigation.canGoBack()}
+        />
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -251,7 +255,8 @@ const GroupList = () => {
     <View style={[styles.screen, {backgroundColor: colors.background}]}>
       <Header
         title="Groups"
-        showBackButton
+        showBackButton={navigation.canGoBack()}
+        showDrawerButton={!navigation.canGoBack()}
         rightComponent={
           <TouchableOpacity
             style={[styles.addBtn, {backgroundColor: colors.primary + '15'}]}

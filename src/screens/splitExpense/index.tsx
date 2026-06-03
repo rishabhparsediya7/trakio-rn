@@ -1,4 +1,4 @@
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
 import React, {useCallback, useState} from 'react';
 import {FlatList, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -15,8 +15,11 @@ const filterOptions = ['All', 'You Owe', 'Owed to You', 'Settled'];
 
 const SplitExpenseList = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const {user} = useAuth();
   const colors = lightTheme;
+  const filterFriendId = route.params?.filterFriendId as string | undefined;
+  const friendName = route.params?.friendName as string | undefined;
 
   const [expenses, setExpenses] = useState<SplitExpense[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,6 +49,13 @@ const SplitExpenseList = () => {
     if (!user?.userId) return expenses;
 
     return expenses.filter(expense => {
+      if (
+        filterFriendId &&
+        !expense.participants?.some(p => p.userId === filterFriendId)
+      ) {
+        return false;
+      }
+
       if (selectedFilter === 'All') return true;
       if (selectedFilter === 'Settled') return expense.status === 'settled';
 
@@ -247,6 +257,13 @@ const SplitExpenseList = () => {
       </View>
 
       {/* Expenses list */}
+      {friendName ? (
+        <View style={localStyles.friendBanner}>
+          <AppText variant="md" style={{color: colors.mutedText}}>
+            Showing shared expenses with {friendName}
+          </AppText>
+        </View>
+      ) : null}
       <FlatList
         data={getFilteredExpenses()}
         keyExtractor={item => item.id}
@@ -291,6 +308,10 @@ const localStyles = StyleSheet.create({
   filterContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  friendBanner: {
+    paddingHorizontal: 20,
+    paddingBottom: 4,
   },
   card: {
     marginHorizontal: 16,

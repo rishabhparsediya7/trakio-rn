@@ -1,7 +1,13 @@
 // screens/ExpensesScreen.js
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, FlatList, StyleSheet, View} from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import AppGradient from '@atoms/AppGradient';
 import AppText from '@atoms/AppText';
 import Icon from 'react-native-vector-icons/Octicons';
@@ -111,6 +117,7 @@ const renderItem = ({item}: {item: any}) => (
 
 // Expense
 const Expense = () => {
+  const navigation = useNavigation<any>();
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -229,6 +236,13 @@ const Expense = () => {
           marginLeft: 8,
           fontSize: 16,
         },
+        addShortcut: {
+          width: 36,
+          height: 36,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
         contentContainerStyle: {
           paddingBottom: 20,
           paddingTop: 20,
@@ -239,7 +253,18 @@ const Expense = () => {
 
   return (
     <View style={styles.container}>
-      <Header title="Expenses" showNotification showDrawerButton={true} />
+      <Header
+        title="Personal Expenses"
+        showBackButton={navigation.canGoBack()}
+        showDrawerButton={!navigation.canGoBack()}
+        rightComponent={
+          <TouchableOpacity
+            style={[styles.addShortcut, {backgroundColor: colors.primary}]}
+            onPress={() => navigation.navigate('QuickAddExpense')}>
+            <Icon name="plus" size={18} color="white" />
+          </TouchableOpacity>
+        }
+      />
       <View style={styles.container}>
         <FlatList
           data={expenses || []}

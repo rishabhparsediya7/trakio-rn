@@ -1,16 +1,17 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../providers/ThemeContext';
 import { darkTheme, lightTheme } from '../../../providers/Theme';
 import { useMemo } from 'react';
+import {useHomeStore} from '../../../store';
 
 const routeIcons: { [key: string]: { default: string; focused: string } } = {
-    Home: { default: 'home-outline', focused: 'home' },
-    Expenses: { default: 'list-outline', focused: 'list' },
-    Chat: { default: 'chatbubble-ellipses-outline', focused: 'chatbubble-ellipses' },
+    Balances: { default: 'wallet-outline', focused: 'wallet' },
+    Friends: { default: 'people-outline', focused: 'people' },
+    Groups: { default: 'layers-outline', focused: 'layers' },
+    Activity: { default: 'pulse-outline', focused: 'pulse' },
     Profile: { default: 'person-outline', focused: 'person' },
-    Add: { default: 'add', focused: 'add' },
 };
 
 type Props = {
@@ -26,8 +27,12 @@ type Props = {
 
 const TabButton = (props: Props) => {
     const { routeName, isFocused, isLeftOfFocused, isRightOfFocused, onPress, index, focusedIndex, maxIndex } = props;
-    const iconInfo = routeIcons[routeName]; 
+    const iconInfo = routeIcons[routeName] || {
+        default: 'ellipse-outline',
+        focused: 'ellipse',
+    };
     const { theme } = useTheme();
+    const {unreadNotifications} = useHomeStore();
     const colors = theme === 'dark' ? darkTheme : lightTheme;
 
     const styles = useMemo(() => StyleSheet.create({
@@ -84,6 +89,28 @@ const TabButton = (props: Props) => {
             borderBottomRightRadius: 25,
             height: 72,
         },
+        iconWrapper: {
+            position: 'relative',
+        },
+        badge: {
+            position: 'absolute',
+            top: -6,
+            right: -8,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: '#FF3B30',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 4,
+            borderWidth: 1,
+            borderColor: colors.background,
+        },
+        badgeText: {
+            color: 'white',
+            fontSize: 9,
+            fontWeight: '700',
+        },
     }), [theme]);
 
     const containerStyle: StyleProp<ViewStyle> = [
@@ -113,11 +140,20 @@ const TabButton = (props: Props) => {
     return (
         <View style={styles.wrapper}>
             <TouchableOpacity onPress={onPress} style={containerStyle} activeOpacity={0.8}>
-                <Icon
-                    name={isFocused ? iconInfo.focused : iconInfo.default}
-                    size={24}
-                    color={isFocused ? colors.tabBarIconActive : colors.tabBarIconInactive}
-                />
+                <View style={styles.iconWrapper}>
+                    <Icon
+                        name={isFocused ? iconInfo.focused : iconInfo.default}
+                        size={24}
+                        color={isFocused ? colors.tabBarIconActive : colors.tabBarIconInactive}
+                    />
+                    {routeName === 'Activity' && unreadNotifications > 0 && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                            </Text>
+                        </View>
+                    )}
+                </View>
             </TouchableOpacity>
         </View>
     );

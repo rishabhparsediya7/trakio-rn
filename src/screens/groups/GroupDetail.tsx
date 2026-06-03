@@ -12,7 +12,6 @@ import AppText from '@atoms/AppText';
 import SegmentedControl from '@molecules/SegmentedControl';
 import {darkTheme, lightTheme} from '../../providers/Theme';
 import {useTheme} from '../../providers/ThemeContext';
-import {useAuth} from '../../providers/AuthProvider';
 import groupApi, {
   GroupDetail as GroupDetailType,
   GroupMember,
@@ -24,18 +23,18 @@ import {
 } from '@react-navigation/native';
 import GroupChat from './GroupChat';
 import {createInitialsForImage} from '../../utils/users';
+import dayjs from 'dayjs';
 
 const GroupDetail = () => {
   const {theme} = useTheme();
   const colors = theme === 'dark' ? darkTheme : lightTheme;
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const {user: authUser} = useAuth();
   const groupId = route.params?.groupId;
 
   const [group, setGroup] = useState<GroupDetailType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Chat');
+  const [activeTab, setActiveTab] = useState('Expenses');
 
   const fetchGroup = async () => {
     try {
@@ -74,6 +73,48 @@ const GroupDetail = () => {
         </AppText>
       </View>
     </View>
+  );
+
+  const renderExpenseItem = ({item}: {item: GroupDetailType['recentExpenses'][0]}) => (
+    <TouchableOpacity
+      style={[styles.expenseCard, {backgroundColor: colors.cardBackground}]}
+      activeOpacity={0.85}
+      onPress={() =>
+        navigation.navigate('SplitExpenseDetail', {
+          splitExpenseId: item.id,
+        })
+      }>
+      <View style={styles.expenseCardTop}>
+        <View style={styles.expenseCardInfo}>
+          <AppText variant="lg" weight="semiBold">
+            {item.description}
+          </AppText>
+          <AppText variant="md" style={{color: colors.mutedText}}>
+            Added by {item.creatorName || 'Someone'}
+          </AppText>
+        </View>
+        <AppText variant="lg" weight="bold">
+          Rs. {Number(item.totalAmount).toFixed(0)}
+        </AppText>
+      </View>
+      <View style={styles.expenseCardMeta}>
+        <AppText variant="caption" style={{color: colors.mutedText}}>
+          {dayjs(item.expenseDate).format('DD MMM YYYY')}
+        </AppText>
+        <View
+          style={[
+            styles.metaBadge,
+            {backgroundColor: colors.primary + '15'},
+          ]}>
+          <AppText
+            variant="caption"
+            weight="semiBold"
+            style={{color: colors.primary, textTransform: 'capitalize'}}>
+            {item.splitType}
+          </AppText>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -138,7 +179,7 @@ const GroupDetail = () => {
 
       {/* Segmented Tab Control */}
       <SegmentedControl
-        options={['Chat', 'Members']}
+        options={['Expenses', 'Members', 'Chat']}
         activeOption={activeTab}
         onOptionPress={setActiveTab}
         containerStyle={{marginHorizontal: 16, marginTop: 12}}
@@ -146,6 +187,33 @@ const GroupDetail = () => {
 
       {/* Tab Content */}
       <View style={{flex: 1, marginTop: 8}}>
+        {activeTab === 'Expenses' && (
+          <FlatList
+            data={group.recentExpenses || []}
+            renderItem={renderExpenseItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Icon
+                  name="receipt-text-outline"
+                  size={44}
+                  color={colors.mutedText}
+                />
+                <AppText variant="h6" weight="semiBold">
+                  No group expenses yet
+                </AppText>
+                <AppText
+                  variant="md"
+                  style={{color: colors.mutedText, textAlign: 'center'}}>
+                  Start with one shared expense and this group becomes your running ledger.
+                </AppText>
+              </View>
+            }
+          />
+        )}
+
         {activeTab === 'Chat' && (
           <GroupChat
             groupId={groupId}
@@ -166,7 +234,7 @@ const GroupDetail = () => {
       </View>
 
       {/* FAB — Add Expense */}
-      {activeTab === 'Chat' && (
+      {activeTab === 'Expenses' && (
         <TouchableOpacity
           style={[styles.fab, {backgroundColor: colors.primary}]}
           onPress={() =>
@@ -219,6 +287,31 @@ const styles = StyleSheet.create({
     padding: 16,
     flexGrow: 1,
   },
+  expenseCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    gap: 12,
+  },
+  expenseCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  expenseCardInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  expenseCardMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metaBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -238,9 +331,17 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+  },
   fab: {
     position: 'absolute',
-    bottom: 80, // Moved up to not overlap with chat input
+    bottom: 80,
     right: 20,
     width: 50,
     height: 50,

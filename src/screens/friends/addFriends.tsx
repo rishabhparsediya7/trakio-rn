@@ -4,6 +4,7 @@ import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -30,14 +31,14 @@ interface User {
   profilePicture?: string;
 }
 
-const TABS = ['Find', 'Requests', 'Friends'];
+const TABS = ['Friends', 'Requests', 'Find'];
 
 const AddFriends = () => {
   const navigation = useNavigation<any>();
   const {theme} = useTheme();
   const colors = theme === 'dark' ? darkTheme : lightTheme;
 
-  const [activeTab, setActiveTab] = useState('Find');
+  const [activeTab, setActiveTab] = useState('Friends');
   const [friends, setFriends] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -162,10 +163,7 @@ const AddFriends = () => {
     setRequestingSplink(user.id);
     try {
       await api.post('/api/chat/splink/request', {friendId: user.id});
-      Alert.alert(
-        'Splink Sent! 🎉',
-        `A connection request has been sent to ${user.firstName}.`,
-      );
+      Alert.alert('Request Sent', `A friend request was sent to ${user.firstName}.`);
       // Remove from search results and add to sent list
       setSearchResults(prev => prev.filter(u => u.id !== user.id));
       setSentSplinks(prev => [
@@ -234,6 +232,11 @@ const AddFriends = () => {
           justifyContent: 'center',
           alignItems: 'center',
         },
+        avatarImage: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+        },
         avatarText: {
           color: 'white',
           fontSize: 16,
@@ -242,6 +245,17 @@ const AddFriends = () => {
         userInfo: {
           flex: 1,
           marginLeft: 12,
+        },
+        friendActions: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginTop: 10,
+        },
+        friendActionChip: {
+          borderRadius: 18,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
         },
         splinkButton: {
           backgroundColor: colors.primary + '15',
@@ -298,18 +312,33 @@ const AddFriends = () => {
     [colors, theme],
   );
 
+  const openFriendChat = (user: User) => {
+    navigation.navigate('FriendChat', {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      image: user.profilePicture || '',
+      lastMessage: '',
+      lastMessageTime: '',
+    });
+  };
+
   const renderUserRow = (user: User, isFriend: boolean) => {
     const isSentPending = sentSplinks.some(s => s.friendId === user.id);
 
     return (
       <View key={user.id} style={styles.userRow}>
-        <View style={styles.avatar}>
-          <AppText weight="bold" style={styles.avatarText}>
-            {createInitialsForImage(
-              (user.firstName || '') + ' ' + (user.lastName || ''),
-            )}
-          </AppText>
-        </View>
+        {user.profilePicture ? (
+          <Image source={{uri: user.profilePicture}} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}>
+            <AppText weight="bold" style={styles.avatarText}>
+              {createInitialsForImage(
+                (user.firstName || '') + ' ' + (user.lastName || ''),
+              )}
+            </AppText>
+          </View>
+        )}
         <View style={styles.userInfo}>
           <AppText weight="semiBold">
             {user.firstName} {user.lastName}
@@ -317,6 +346,58 @@ const AddFriends = () => {
           <AppText variant="caption" color={colors.mutedText}>
             {user.email || user.phoneNumber}
           </AppText>
+          {isFriend && (
+            <View style={styles.friendActions}>
+              <TouchableOpacity
+                style={[
+                  styles.friendActionChip,
+                  {backgroundColor: colors.primary + '15'},
+                ]}
+                onPress={() =>
+                  navigation.navigate('CreateSplitExpense', {
+                    preselectedFriends: [user.id],
+                  })
+                }>
+                <AppText
+                  variant="caption"
+                  weight="semiBold"
+                  style={{color: colors.primary}}>
+                  New split
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.friendActionChip,
+                  {backgroundColor: (colors.warning || '#F59E0B') + '15'},
+                ]}
+                onPress={() =>
+                  navigation.navigate('SplitExpenseList', {
+                    filterFriendId: user.id,
+                    friendName: `${user.firstName} ${user.lastName}`,
+                  })
+                }>
+                <AppText
+                  variant="caption"
+                  weight="semiBold"
+                  style={{color: colors.warning || '#F59E0B'}}>
+                  Settle up
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.friendActionChip,
+                  {backgroundColor: colors.cardBackground},
+                ]}
+                onPress={() => openFriendChat(user)}>
+                <AppText
+                  variant="caption"
+                  weight="semiBold"
+                  style={{color: colors.text}}>
+                  Message
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         {isFriend ? (
           <View style={styles.friendBadge}>
@@ -348,7 +429,7 @@ const AddFriends = () => {
                 variant="caption"
                 weight="semiBold"
                 style={{color: colors.primary}}>
-                Splink
+                Connect
               </AppText>
             )}
           </TouchableOpacity>
@@ -369,10 +450,39 @@ const AddFriends = () => {
   return (
     <View style={styles.container}>
       <Header
-        title="Add Friends"
-        showBackButton
+        title="Friends"
+        showBackButton={navigation.canGoBack()}
+        showDrawerButton={!navigation.canGoBack()}
         showImage={false}
         onBackPress={() => navigation.goBack()}
+        rightComponent={
+          <View style={{flexDirection: 'row', gap: 8}}>
+            <TouchableOpacity
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.primary + '15',
+              }}
+              onPress={() => setActiveTab('Find')}>
+              <MaterialIcon name="person-add" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.primary,
+              }}
+              onPress={() => navigation.navigate('CreateSplitExpense')}>
+              <MaterialIcon name="plus" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       <View style={styles.content}>
@@ -441,7 +551,7 @@ const AddFriends = () => {
                     variant="md"
                     color={colors.mutedText}
                     style={styles.hint}>
-                    Search by email or phone number to find and add friends.
+                    Search by email or phone number to connect with people you split with.
                   </AppText>
                 </View>
               )}
@@ -487,7 +597,7 @@ const AddFriends = () => {
                               {item.firstName} {item.lastName}
                             </AppText>
                             <AppText variant="caption" color={colors.mutedText}>
-                              Wants to connect
+                              Sent you a friend request
                             </AppText>
                           </View>
                           <View style={styles.actionButtons}>

@@ -60,6 +60,7 @@ const BalancesScreen = () => {
         onPress={() =>
           navigation.navigate('SplitExpenseList', {
             filterFriendId: item.friendId,
+            friendName: item.friendName,
           })
         }>
         <View style={styles.avatarContainer}>
@@ -102,6 +103,17 @@ const BalancesScreen = () => {
       flex: 1,
       backgroundColor: colors.background,
     },
+    headerActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    headerBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     summaryContainer: {
       padding: 20,
     },
@@ -109,6 +121,33 @@ const BalancesScreen = () => {
       backgroundColor: colors.cardBackground,
       borderRadius: 16,
       padding: 20,
+    },
+    quickActions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 16,
+    },
+    quickActionButton: {
+      flex: 1,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    quickActionSecondary: {
+      borderWidth: 1,
+    },
+    quickActionPrimaryText: {
+      color: '#fff',
+      fontWeight: '700',
+      ...commonStyles.textDefault,
+    },
+    quickActionSecondaryText: {
+      fontWeight: '600',
+      ...commonStyles.textDefault,
     },
     summaryRow: {
       flexDirection: 'row',
@@ -203,6 +242,17 @@ const BalancesScreen = () => {
       textAlign: 'center',
       ...commonStyles.textDefault,
     },
+    emptyButton: {
+      marginTop: 20,
+      borderRadius: 12,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+    },
+    emptyButtonText: {
+      color: '#fff',
+      fontWeight: '700',
+      ...commonStyles.textDefault,
+    },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -213,7 +263,11 @@ const BalancesScreen = () => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Header title="Balances" showBack />
+        <Header
+          title="Balances"
+          showBackButton={navigation.canGoBack()}
+          showDrawerButton={!navigation.canGoBack()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -225,8 +279,27 @@ const BalancesScreen = () => {
     <View style={styles.container}>
       <Header
         title="Balances"
-        showBack={true}
+        showBackButton={navigation.canGoBack()}
+        showDrawerButton={!navigation.canGoBack()}
         onBackPress={() => navigation.canGoBack() && navigation.goBack()}
+        rightComponent={
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.headerBtn, {backgroundColor: colors.primary + '15'}]}
+              onPress={() => navigation.navigate('SplitExpenseList')}>
+              <Icon
+                name="format-list-bulleted"
+                size={20}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.headerBtn, {backgroundColor: colors.primary}]}
+              onPress={() => navigation.navigate('CreateSplitExpense')}>
+              <Icon name="plus" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Summary Card */}
@@ -261,6 +334,26 @@ const BalancesScreen = () => {
             </Text>
           </View>
         </View>
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={[styles.quickActionButton, {backgroundColor: colors.primary}]}
+            onPress={() => navigation.navigate('CreateSplitExpense')}>
+            <Icon name="plus" size={18} color="#fff" />
+            <Text style={styles.quickActionPrimaryText}>New Split</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.quickActionButton,
+              styles.quickActionSecondary,
+              {backgroundColor: colors.cardBackground, borderColor: colors.border},
+            ]}
+            onPress={() => navigation.navigate('SplitExpenseList')}>
+            <Icon name="receipt-text-outline" size={18} color={colors.text} />
+            <Text style={[styles.quickActionSecondaryText, {color: colors.text}]}>
+              Shared Expenses
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Balances List */}
@@ -281,6 +374,11 @@ const BalancesScreen = () => {
             <Text style={styles.emptyText}>
               No balances yet.{'\n'}Start splitting expenses with friends!
             </Text>
+            <TouchableOpacity
+              style={[styles.emptyButton, {backgroundColor: colors.primary}]}
+              onPress={() => navigation.navigate('CreateSplitExpense')}>
+              <Text style={styles.emptyButtonText}>Create Your First Split</Text>
+            </TouchableOpacity>
           </View>
         }
         contentContainerStyle={{paddingBottom: 20}}

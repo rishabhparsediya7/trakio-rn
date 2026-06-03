@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -7,154 +7,367 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import AppText from '@atoms/AppText';
-import Header from '@organisms/Header';
-import {lightTheme} from '../../providers/Theme';
-import {useHomeStore} from '../../store';
-import api from '../../services/api';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import AppText from '@atoms/AppText';
+import Header from '@organisms/Header';
+import {darkTheme, lightTheme} from '../../providers/Theme';
+import {useTheme} from '../../providers/ThemeContext';
 import {useAuthorizeNavigation} from '../../navigators/navigators';
+import {useHomeStore} from '../../store';
+import api from '../../services/api';
+import groupApi from '../../services/groupApi';
 
 dayjs.extend(relativeTime);
 
-interface Notification {
+type NotificationItem = {
   id: string;
-  userId: string;
   title: string;
   body: string;
   type: string;
   data: any;
   isRead: boolean;
   createdAt: string;
-}
+};
 
-const NotificationsScreen = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+type GroupActivityItem = {
+  id: string;
+  action: string;
+  description: string;
+  isRead: boolean;
+  createdAt: string;
+  splitExpenseId?: string;
+  groupId?: string;
+  actorName?: string;
+  metadata?: string;
+};
+
+type ActivityItem = {
+  id: string;
+  source: 'notification' | 'activity';
+  title: string;
+  body: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+  splitExpenseId?: string;
+  groupId?: string;
+  payload?: any;
+};
+
+const getIconConfig = (item: ActivityItem, colors: typeof lightTheme) => {
+  if (
+    item.type === 'settlement' ||
+    item.type === 'settlement_created' ||
+    item.body.toLowerCase().includes('paid')
+  ) {
+    return {
+      icon: 'cash-check',
+      backgroundColor: colors.success + '18',
+      iconColor: colors.success,
+    };
+  }
+
+  if (
+    item.type === 'split_expense' ||
+    item.type === 'expense_created' ||
+    item.body.toLowerCase().includes('expense')
+  ) {
+    return {
+      icon: 'receipt-text-outline',
+      backgroundColor: colors.primary + '18',
+      iconColor: colors.primary,
+    };
+  }
+
+  if (item.groupId) {
+    return {
+      icon: 'account-group-outline',
+      backgroundColor: (colors.warning || '#F59E0B') + '18',
+      iconColor: colors.warning || '#F59E0B',
+    };
+  }
+
+  return {
+    icon: 'bell-outline',
+    backgroundColor: colors.mutedText + '18',
+    iconColor: colors.mutedText,
+  };
+};
+
+const normalizeNotification = (item: NotificationItem): ActivityItem => ({
+  id: item.id,
+  source: 'notification',
+  title: item.title || 'Notification',
+  body: item.body,
+  type: item.type,
+  isRead: item.isRead,
+  createdAt: item.createdAt,
+  splitExpenseId: item.data?.splitExpenseId,
+  groupId: item.data?.groupId,
+  payload: item.data,
+});
+
+const normalizeActivity = (item: GroupActivityItem): ActivityItem => ({
+  id: item.id,
+  source: 'activity',
+  title: item.actorName || 'Recent activity',
+  body: item.description,
+  type: item.action,
+  isRead: item.isRead,
+  createdAt: item.createdAt,
+  splitExpenseId: item.splitExpenseId,
+  groupId: item.groupId,
+  payload: item.metadata,
+});
+
+const ActivityScreen = () => {
+  const navigation = useAuthorizeNavigation();
+  const {theme} = useTheme();
+  const colors = theme === 'dark' ? darkTheme : lightTheme;
+  const {
+    setUnreadNotifications,
+    decrementUnreadNotifications,
+    clearUnreadNotifications,
+  } = useHomeStore();
+
+  const [items, setItems] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const colors = lightTheme;
-  const navigation = useAuthorizeNavigation();
-  const {decrementUnreadNotifications, clearUnreadNotifications} =
-    useHomeStore();
+  const [markingAll, setMarkingAll] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchActivity = useCallback(async () => {
     try {
-      // The backend expects userId in the params, but our api client usually
-      // appends it from segments or we need to provide it.
-      // Based on router: /api/notifications/:userId
-      const response = await api.get('/api/notifications/me'); // Assuming 'me' works or we get it from auth
-      setNotifications(response.data.notifications);
+      const [notificationResponse, groupActivityResponse, unreadActivityRes] =
+        await Promise.all([
+          api.get('/api/notifications/me'),
+          groupApi.getUserActivityFeed(),
+          groupApi.getUnreadActivityCount(),
+        ]);
+
+      const notifications: NotificationItem[] =
+        notificationResponse.data?.notifications || [];
+      const activityLogs: GroupActivityItem[] =
+        groupActivityResponse.data?.data || [];
+
+      const mergedItems = [
+        ...notifications.map(normalizeNotification),
+        ...activityLogs.map(normalizeActivity),
+      ].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+
+      const totalUnread =
+        (notificationResponse.data?.unreadCount || 0) +
+        (unreadActivityRes.data?.data?.count || 0);
+
+      setItems(mergedItems);
+      setUnreadNotifications(totalUnread);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('Error fetching activity feed:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [setUnreadNotifications]);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    fetchActivity();
+  }, [fetchActivity]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchNotifications();
-  };
+  const markItemAsRead = useCallback(
+    async (item: ActivityItem) => {
+      if (item.isRead) {
+        return;
+      }
 
-  const markAsRead = async (id: string) => {
-    const notification = notifications.find(n => n.id === id);
-    if (!notification || notification.isRead) return;
+      try {
+        if (item.source === 'notification') {
+          await api.patch(`/api/notifications/${item.id}/read`);
+        } else {
+          await groupApi.markActivityAsRead(item.id);
+        }
 
-    try {
-      await api.patch(`/api/notifications/${id}/read`);
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? {...n, isRead: true} : n)),
-      );
-      decrementUnreadNotifications();
-    } catch (error) {
-      console.error('Error marking as read:', error);
+        setItems(prev =>
+          prev.map(entry =>
+            entry.id === item.id && entry.source === item.source
+              ? {...entry, isRead: true}
+              : entry,
+          ),
+        );
+        decrementUnreadNotifications();
+      } catch (error) {
+        console.error('Error marking activity as read:', error);
+      }
+    },
+    [decrementUnreadNotifications],
+  );
+
+  const handleItemPress = async (item: ActivityItem) => {
+    await markItemAsRead(item);
+
+    if (item.splitExpenseId) {
+      navigation.navigate('SplitExpenseDetail', {
+        splitExpenseId: item.splitExpenseId,
+      });
+      return;
     }
-  };
 
-  const handleNotificationPress = (item: Notification) => {
-    markAsRead(item.id);
+    if (item.groupId) {
+      navigation.navigate('GroupDetail', {
+        groupId: item.groupId,
+      });
+      return;
+    }
 
-    // Deep linking based on type
-    if (item.type === 'split_expense' && item.data?.splitExpenseId) {
-      navigation.navigate('SplitExpenseDetail', {
-        splitExpenseId: item.data.splitExpenseId,
-      });
-    } else if (item.type === 'settlement' && item.data?.splitExpenseId) {
-      navigation.navigate('SplitExpenseDetail', {
-        splitExpenseId: item.data.splitExpenseId,
-      });
+    if (
+      item.type === 'splink_request' ||
+      item.type === 'splink_response' ||
+      item.body.toLowerCase().includes('friend request')
+    ) {
+      navigation.navigate('AddFriends');
     }
   };
 
   const markAllAsRead = async () => {
+    const unreadItems = items.filter(item => !item.isRead);
+    if (unreadItems.length === 0) {
+      return;
+    }
+
+    setMarkingAll(true);
     try {
-      await api.patch('/api/notifications/me/read-all');
-      setNotifications(prev => prev.map(n => ({...n, isRead: true})));
+      await Promise.all([
+        api.patch('/api/notifications/me/read-all'),
+        ...unreadItems
+          .filter(item => item.source === 'activity')
+          .map(item => groupApi.markActivityAsRead(item.id)),
+      ]);
+
+      setItems(prev => prev.map(item => ({...item, isRead: true})));
       clearUnreadNotifications();
     } catch (error) {
-      console.error('Error marking all as read:', error);
+      console.error('Error marking all activity as read:', error);
+    } finally {
+      setMarkingAll(false);
     }
   };
 
-  const renderItem = ({item}: {item: Notification}) => (
-    <TouchableOpacity
-      style={[
-        styles.notificationItem,
-        !item.isRead && {backgroundColor: colors.primary + '08'},
-      ]}
-      onPress={() => handleNotificationPress(item)}>
-      <View style={styles.iconContainer}>
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        centerContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        },
+        listContent: {
+          flexGrow: 1,
+          paddingBottom: 24,
+        },
+        itemRow: {
+          flexDirection: 'row',
+          paddingHorizontal: 16,
+          paddingVertical: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.borderLight,
+          alignItems: 'center',
+          gap: 12,
+        },
+        itemUnread: {
+          backgroundColor: colors.primary + '08',
+        },
+        iconShell: {
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        content: {
+          flex: 1,
+          gap: 4,
+        },
+        titleRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        title: {
+          flex: 1,
+        },
+        timestamp: {
+          color: colors.mutedText,
+        },
+        body: {
+          color: colors.mutedText,
+          lineHeight: 18,
+        },
+        unreadDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: colors.primary,
+        },
+        emptyTitle: {
+          marginTop: 12,
+        },
+      }),
+    [colors],
+  );
+
+  const renderItem = ({item}: {item: ActivityItem}) => {
+    const iconConfig = getIconConfig(item, colors);
+
+    return (
+      <TouchableOpacity
+        style={[styles.itemRow, !item.isRead && styles.itemUnread]}
+        activeOpacity={0.8}
+        onPress={() => handleItemPress(item)}>
         <View
           style={[
-            styles.typeIcon,
-            {
-              backgroundColor: !item.isRead
-                ? colors.primary
-                : colors.mutedText + '20',
-            },
+            styles.iconShell,
+            {backgroundColor: iconConfig.backgroundColor},
           ]}>
-          <Icon
-            name={item.isRead ? 'notifications-none' : 'notifications-active'}
-            size={20}
-            color={!item.isRead ? 'white' : colors.mutedText}
-          />
+          <Icon name={iconConfig.icon} size={20} color={iconConfig.iconColor} />
         </View>
-      </View>
-      <View style={styles.contentContainer}>
-        <View style={styles.headerRow}>
-          <AppText variant="lg" weight="bold" style={styles.title}>
-            {item.title}
-          </AppText>
-          <AppText variant="caption" color={colors.mutedText}>
-            {dayjs(item.createdAt).fromNow()}
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <AppText variant="lg" weight="semiBold" style={styles.title}>
+              {item.title}
+            </AppText>
+            <AppText variant="caption" style={styles.timestamp}>
+              {dayjs(item.createdAt).fromNow()}
+            </AppText>
+          </View>
+          <AppText variant="md" style={styles.body}>
+            {item.body}
           </AppText>
         </View>
-        <AppText variant="md" color={colors.mutedText} style={styles.body}>
-          {item.body}
-        </AppText>
-      </View>
-      {!item.isRead && <View style={styles.readDot} />}
-    </TouchableOpacity>
-  );
+        {!item.isRead && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Header
-        title="Notifications"
-        showBackButton
+        title="Activity"
+        showBackButton={navigation.canGoBack()}
+        showDrawerButton={!navigation.canGoBack()}
         onBackPress={() => navigation.goBack()}
         rightComponent={
-          notifications.some(n => !n.isRead) ? (
-            <TouchableOpacity onPress={markAllAsRead}>
+          items.some(item => !item.isRead) ? (
+            <TouchableOpacity onPress={markAllAsRead} disabled={markingAll}>
               <AppText variant="md" color={colors.primary} weight="semiBold">
-                Mark all as read
+                {markingAll ? 'Updating...' : 'Mark all read'}
               </AppText>
             </TouchableOpacity>
           ) : null
@@ -167,25 +380,28 @@ const NotificationsScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={notifications}
+          data={items}
+          keyExtractor={item => `${item.source}-${item.id}`}
           renderItem={renderItem}
-          keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => {
+              setRefreshing(true);
+              fetchActivity();
+            }} />
           }
           ListEmptyComponent={
             <View style={styles.centerContainer}>
               <Icon
-                name="notifications-off"
-                size={64}
-                color={colors.mutedText + '40'}
-              />
-              <AppText
-                variant="h6"
+                name="timeline-clock-outline"
+                size={52}
                 color={colors.mutedText}
-                style={{marginTop: 16}}>
-                No notifications yet
+              />
+              <AppText variant="h6" weight="semiBold" style={styles.emptyTitle}>
+                No activity yet
+              </AppText>
+              <AppText variant="md" style={{color: colors.mutedText, textAlign: 'center'}}>
+                Splits, settlements, group updates, and alerts will all show up here.
               </AppText>
             </View>
           }
@@ -195,61 +411,4 @@ const NotificationsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: lightTheme.background,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  listContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: lightTheme.borderLight,
-    alignItems: 'center',
-  },
-  iconContainer: {
-    marginRight: 16,
-  },
-  typeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  title: {
-    flex: 1,
-    marginRight: 8,
-  },
-  body: {
-    lineHeight: 18,
-  },
-  readDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: lightTheme.primary,
-    marginLeft: 12,
-  },
-});
-
-export default NotificationsScreen;
+export default ActivityScreen;

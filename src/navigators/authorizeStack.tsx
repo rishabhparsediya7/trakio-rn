@@ -7,6 +7,7 @@ import DrawerNavigator from './drawerNavigator';
 import {RouteProp} from '@react-navigation/native';
 import Dashboard from '../screens/dashboard';
 import Home from '../screens/home';
+import Expense from '../screens/expense';
 import AddExpense from '../screens/addExpense';
 import ChatScreen from '../screens/chat';
 import FriendChatScreen from '../screens/chat/friendChat';
@@ -51,6 +52,7 @@ export type AuthorizeNavigationStackList = {
   EditPersonalInformation: undefined;
   UpdatePassword: undefined;
   ExportData: undefined;
+  ExpenseList: undefined;
   // Split Expense routes
   SplitExpenseList: undefined;
   CreateSplitExpense: {preselectedFriends?: string[]} | undefined;
@@ -132,6 +134,10 @@ const AuthorizeNavigation = () => {
         <AuthorizeNavigationStack.Screen
           name="ExportData"
           component={ExportData}
+        />
+        <AuthorizeNavigationStack.Screen
+          name="ExpenseList"
+          component={Expense}
         />
         {/* Split Expense Screens */}
         <AuthorizeNavigationStack.Screen
