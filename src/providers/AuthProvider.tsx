@@ -197,11 +197,11 @@ export default function AuthProvider({children}: PropsWithChildren) {
       const result = await response.json();
       const {userId, token, name} = result;
       if (result.success && result.token) {
-        setIsAuthenticated(true);
         await Promise.all([
           AsyncStorage.setItem('userId', userId),
           AsyncStorage.setItem('token', token),
         ]);
+        setIsAuthenticated(true);
         setUser({
           userId: userId || '',
           name: name || '',
@@ -242,11 +242,11 @@ export default function AuthProvider({children}: PropsWithChildren) {
       const result = await response.json();
       const {userId, token, name} = result;
       if (result.success && result.token) {
-        setIsAuthenticated(true);
         await Promise.all([
           AsyncStorage.setItem('userId', userId),
           AsyncStorage.setItem('token', token),
         ]);
+        setIsAuthenticated(true);
         setUser({
           userId: userId || '',
           name: name || '',
@@ -277,12 +277,17 @@ export default function AuthProvider({children}: PropsWithChildren) {
     }
   };
 
+  // Restore persisted auth status once on mount.
   useEffect(() => {
     const fetchAuthStatus = async () => {
       const token = await AsyncStorage.getItem('token');
       setIsAuthenticated(!!token);
     };
     fetchAuthStatus();
+  }, []);
+
+  // Load the user profile whenever auth becomes true.
+  useEffect(() => {
     if (isAuthenticated) {
       getUser();
     }

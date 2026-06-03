@@ -100,10 +100,13 @@ const SignInScreen = ({navigation}) => {
       setGoogleLoading(true);
       const {success, userInfo} = await googleSignIn();
       if (success) {
-        await signInWithGoogle({idToken: userInfo?.data?.idToken || ''});
-        console.log('User signed in successfully:', userInfo);
+        const idToken = userInfo?.data?.idToken || '';
+        const response = await signInWithGoogle({idToken});
+        if (!response?.success || !response?.token) {
+          setError(response?.message || 'Failed to sign in with Google');
+        }
       } else {
-        console.log('Failed to sign in:', userInfo);
+        setError('Failed to sign in with Google');
       }
     } catch (error) {
       console.log('Error signing in:', error);
