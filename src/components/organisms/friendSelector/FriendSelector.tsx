@@ -25,6 +25,8 @@ export interface FriendItem {
   email?: string;
   phoneNumber?: string;
   profilePicture?: string;
+  /** True for invited-but-not-registered users (placeholder accounts). */
+  isPlaceholder?: boolean;
 }
 
 export interface FriendSelectorProps {
@@ -64,7 +66,7 @@ const FriendSelector: React.FC<FriendSelectorProps> = ({
   >([]);
   const [searchResults, setSearchResults] = useState<FriendItem[]>([]);
   const [searching, setSearching] = useState(false);
-  const [requestingSplink, setRequestingSplink] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Fetch friends list
@@ -150,21 +152,36 @@ const FriendSelector: React.FC<FriendSelectorProps> = ({
     }
   };
 
-  const initiateSplinkRequest = async (friend: FriendItem) => {
-    setRequestingSplink(friend.id);
+  const isEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  // Open Ledger: add anyone by email. Resolves to an existing user or creates
+  // a placeholder (they'll be invited by email), then selects them immediately.
+  const inviteByEmail = async () => {
+    const email = searchQuery.trim().toLowerCase();
+    if (!isEmail(email)) return;
+    setInviting(true);
     try {
-      await api.post('/api/chat/splink/request', {friendId: friend.id});
-      Alert.alert(
-        'Splink Sent!',
-        `A connection request has been sent to ${friend.firstName}. You can add them once they accept.`,
-      );
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to send Splink request',
-      );
+      const resp = await api.post('/api/users/resolve-contact', {email});
+      if (resp.data?.success && resp.data?.user) {
+        const u = resp.data.user;
+        onToggleFriend({
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          phoneNumber: u.phoneNumber,
+          profilePicture: u.profilePicture,
+          isPlaceholder: u.isPlaceholder,
+        });
+        setSearchQuery('');
+      } else {
+        Alert.alert('Error', resp.data?.message || 'Could not add this contact');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not add this contact');
     } finally {
-      setRequestingSplink(null);
+      setInviting(false);
     }
   };
 
@@ -276,6 +293,13 @@ const FriendSelector: React.FC<FriendSelectorProps> = ({
               <AppText style={styles.chipText}>
                 {friend.firstName} {friend.lastName}
               </AppText>
+              {friend.isPlaceholder && (
+                <MaterialIcon
+                  name="email-outline"
+                  size={12}
+                  color={colors.primary}
+                />
+              )}
               <MaterialIcon name="close" size={14} color={colors.primary} />
             </TouchableOpacity>
           ))}
@@ -362,46 +386,86 @@ const FriendSelector: React.FC<FriendSelectorProps> = ({
               </AppText>
             )}
 
-            {/* Global search results */}
+            {/* App users — add directly, no handshake required (Open Ledger) */}
             {showGlobalSearch && searchResults.length > 0 && (
               <>
                 <AppText variant="caption" style={styles.sectionLabel}>
-                  Global Search
+                  On Trakio
                 </AppText>
-                {searchResults.map(remoteUser => (
-                  <View key={remoteUser.id} style={styles.friendOption}>
-                    <MaterialIcon
-                      name="account-circle"
-                      size={36}
-                      color={colors.mutedText}
-                    />
-                    <View style={{marginLeft: 12, flex: 1}}>
-                      <AppText weight="medium">
-                        {remoteUser.firstName} {remoteUser.lastName}
-                      </AppText>
-                      <AppText variant="caption">{remoteUser.email}</AppText>
-                    </View>
+                {searchResults.map(remoteUser => {
+                  const isSelected = selectedFriends.some(
+                    f => f.id === remoteUser.id,
+                  );
+                  return (
                     <TouchableOpacity
-                      style={styles.splinkButton}
-                      onPress={() => initiateSplinkRequest(remoteUser)}>
-                      {requestingSplink === remoteUser.id ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={colors.primary}
-                        />
-                      ) : (
-                        <AppText
-                          variant="caption"
-                          weight="semiBold"
-                          style={{color: colors.primary}}>
-                          Splink
+                      key={remoteUser.id}
+                      style={[
+                        styles.friendOption,
+                        isSelected && styles.friendOptionSelected,
+                      ]}
+                      onPress={() => handleToggle(remoteUser)}>
+                      <MaterialIcon
+                        name="account-circle"
+                        size={36}
+                        color={colors.mutedText}
+                      />
+                      <View style={{marginLeft: 12, flex: 1}}>
+                        <AppText weight="medium">
+                          {remoteUser.firstName} {remoteUser.lastName}
                         </AppText>
-                      )}
+                        <AppText variant="caption">{remoteUser.email}</AppText>
+                      </View>
+                      <MaterialIcon
+                        name={
+                          isSelected ? 'check-circle' : 'plus-circle-outline'
+                        }
+                        size={24}
+                        color={colors.primary}
+                        style={{marginLeft: 'auto'}}
+                      />
                     </TouchableOpacity>
-                  </View>
-                ))}
+                  );
+                })}
               </>
             )}
+
+            {/* Invite someone not on Trakio yet, by email */}
+            {showGlobalSearch &&
+              isEmail(searchQuery) &&
+              !filteredLocalFriends.some(
+                f => f.email === searchQuery.trim().toLowerCase(),
+              ) &&
+              !searchResults.some(
+                u => u.email === searchQuery.trim().toLowerCase(),
+              ) && (
+                <TouchableOpacity
+                  style={styles.friendOption}
+                  onPress={inviteByEmail}>
+                  <MaterialIcon
+                    name="email-plus-outline"
+                    size={36}
+                    color={colors.primary}
+                  />
+                  <View style={{marginLeft: 12, flex: 1}}>
+                    <AppText weight="medium">
+                      Invite {searchQuery.trim()}
+                    </AppText>
+                    <AppText variant="caption">
+                      Added now, invited by email
+                    </AppText>
+                  </View>
+                  {inviting ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <MaterialIcon
+                      name="plus-circle-outline"
+                      size={24}
+                      color={colors.primary}
+                      style={{marginLeft: 'auto'}}
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
           </ScrollView>
         </View>
       )}
