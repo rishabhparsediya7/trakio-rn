@@ -261,7 +261,7 @@ const SplitExpenseDetail = () => {
       height: '100%',
     },
     settleButton: {
-      backgroundColor: '#22c55e',
+      backgroundColor: colors.positive,
     },
     reminderButton: {
       backgroundColor: colors.primary,
@@ -312,7 +312,7 @@ const SplitExpenseDetail = () => {
 
   const statusColor =
     expense.status === 'settled'
-      ? '#22c55e'
+      ? colors.positive
       : expense.status === 'partially_settled'
       ? '#f59e0b'
       : '#3b82f6';
@@ -432,12 +432,12 @@ const SplitExpenseDetail = () => {
                         styles.participantAvatar,
                         {
                           backgroundColor: isSettled
-                            ? '#22c55e20'
+                            ? colors.positive + '20'
                             : colors.primary + '20',
                         },
                       ]}>
                       <AppText
-                        color={isSettled ? '#22c55e' : colors.primary}
+                        color={isSettled ? colors.positive : colors.primary}
                         weight="semiBold">
                         {createInitialsForImage(
                           `${participant.firstName} ${participant.lastName}`,
@@ -462,7 +462,7 @@ const SplitExpenseDetail = () => {
                       <RupeeIcon
                         amount={participant.amountOwed}
                         size={14}
-                        color={isSettled ? '#22c55e' : colors.text}
+                        color={isSettled ? colors.positive : colors.text}
                       />
                     </View>
                   </View>
@@ -479,7 +479,7 @@ const SplitExpenseDetail = () => {
             </AppText>
             {settlements.map(settlement => (
               <View key={settlement.id} style={styles.settlementCard}>
-                <Icon name="check-circle" size={24} color="#22c55e" />
+                <Icon name="check-circle" size={24} color={colors.positive} />
                 <View style={styles.settlementInfo}>
                   <AppText
                     variant="lg"
@@ -495,7 +495,7 @@ const SplitExpenseDetail = () => {
                 <RupeeIcon
                   amount={settlement.amount}
                   size={14}
-                  color="#22c55e"
+                  color={colors.positive}
                 />
               </View>
             ))}

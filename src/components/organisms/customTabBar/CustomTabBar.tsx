@@ -1,13 +1,18 @@
 // components/CustomTabBar.tsx
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import TabButton from '@organisms/customTabBar/TabButton';
 import { useMemo } from 'react';
 import { useTheme } from '../../../providers/ThemeContext';
 import { darkTheme, lightTheme } from '../../../providers/Theme';
 
-const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
+type Props = BottomTabBarProps & {
+  onAddPress?: () => void;
+};
+
+const CustomTabBar = ({ state, navigation, onAddPress }: Props) => {
   const focusedIndex = state.index;
   const { theme } = useTheme();
   const colors = theme === 'dark' ? darkTheme : lightTheme;
@@ -32,7 +37,44 @@ const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
           elevation: 10,
         },
       }),
-    }
+    },
+    addSlot: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    // Keeps the rounded tab-bar strip continuous behind the floating button.
+    addSlotStrip: {
+      position: 'absolute',
+      bottom: 4,
+      left: 0,
+      right: 0,
+      height: 72,
+      backgroundColor: colors.tabBarBackground,
+    },
+    addButton: {
+      position: 'absolute',
+      top: -28,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 4,
+      borderColor: colors.background,
+      ...Platform.select({
+        ios: {
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.4,
+          shadowRadius: 6,
+        },
+        android: {
+          elevation: 8,
+        },
+      }),
+    },
   }), [theme]);
 
   return (
@@ -41,6 +83,21 @@ const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
         const isFocused = focusedIndex === index;
         const isLeftOfFocused = focusedIndex > index;
         const isRightOfFocused = focusedIndex < index;
+
+        // Center "Add" slot — opens the action sheet instead of navigating.
+        if (route.name === 'Add') {
+          return (
+            <View key={route.key} style={styles.addSlot}>
+              <View style={styles.addSlotStrip} />
+              <TouchableOpacity
+                style={styles.addButton}
+                activeOpacity={0.85}
+                onPress={() => onAddPress?.()}>
+                <Ionicons name="add" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          );
+        }
 
         return (
           <TabButton

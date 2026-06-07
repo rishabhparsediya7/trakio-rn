@@ -115,7 +115,7 @@ const Header: React.FC<HeaderProps> = ({
           position: 'absolute',
           top: -2,
           right: -2,
-          backgroundColor: '#FF3B30',
+          backgroundColor: colors.error,
           borderRadius: 8,
           width: 16,
           height: 16,

@@ -435,7 +435,7 @@ const CreateSplitExpense = () => {
                 <TouchableOpacity
                   style={styles.removeButton}
                   onPress={() => handleToggleFriend(friend)}>
-                  <MaterialIcon name="close-circle" size={24} color="#ef4444" />
+                  <MaterialIcon name="close-circle" size={24} color={colors.negative} />
                 </TouchableOpacity>
               </View>
             ))}

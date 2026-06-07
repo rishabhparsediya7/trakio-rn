@@ -5,8 +5,6 @@ import {useTheme} from '../providers/ThemeContext';
 import {darkTheme, lightTheme} from '../providers/Theme';
 import DrawerNavigator from './drawerNavigator';
 import {RouteProp} from '@react-navigation/native';
-import Dashboard from '../screens/dashboard';
-import Home from '../screens/home';
 import Expense from '../screens/expense';
 import AddExpense from '../screens/addExpense';
 import ChatScreen from '../screens/chat';
@@ -24,6 +22,7 @@ import BalancesScreen from '../screens/splitExpense/balances';
 import QuickAddExpense from '../screens/addExpense/QuickAddExpenseScreen';
 import NotificationsScreen from '../screens/notifications';
 import AddFriends from '../screens/friends/addFriends';
+import Profile from '../screens/profile';
 // Group Screens
 import GroupList from '../screens/groups/GroupList';
 import CreateGroup from '../screens/groups/CreateGroup';
@@ -36,8 +35,6 @@ type ActionType = 'income' | 'bills' | 'budget' | null;
 
 export type AuthorizeNavigationStackList = {
   DrawerNavigator: undefined;
-  Home: undefined;
-  Dashboard: undefined;
   AddExpense: undefined;
   Chat: undefined;
   FriendChat: {
@@ -69,6 +66,7 @@ export type AuthorizeNavigationStackList = {
   QuickAddExpense: undefined;
   Notifications: undefined;
   AddFriends: undefined;
+  Profile: undefined;
   // Group routes
   GroupList: undefined;
   CreateGroup: undefined;
@@ -108,11 +106,6 @@ const AuthorizeNavigation = () => {
         <AuthorizeNavigationStack.Screen
           name="AddExpense"
           component={AddExpense}
-        />
-        <AuthorizeNavigationStack.Screen name="Home" component={Home} />
-        <AuthorizeNavigationStack.Screen
-          name="Dashboard"
-          component={Dashboard}
         />
         <AuthorizeNavigationStack.Screen name="Chat" component={ChatScreen} />
         <AuthorizeNavigationStack.Screen
@@ -171,6 +164,10 @@ const AuthorizeNavigation = () => {
         <AuthorizeNavigationStack.Screen
           name="AddFriends"
           component={AddFriends}
+        />
+        <AuthorizeNavigationStack.Screen
+          name="Profile"
+          component={Profile}
         />
         {/* Group Screens */}
         <AuthorizeNavigationStack.Screen

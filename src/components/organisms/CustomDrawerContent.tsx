@@ -31,32 +31,47 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   };
 
   const navigateToTab = (
-    screen: 'Balances' | 'Friends' | 'Groups' | 'Activity' | 'Profile',
+    screen: 'Home' | 'Groups' | 'Insights' | 'Activity',
   ) => {
     props.navigation.closeDrawer();
     props.navigation.navigate('MainTabs', {screen});
   };
 
+  const navigateToScreen = (screen: string) => {
+    props.navigation.closeDrawer();
+    props.navigation.navigate(screen);
+  };
+
   const primaryItems = [
     {
-      label: 'Balances',
-      icon: 'wallet-outline',
-      onPress: () => navigateToTab('Balances'),
+      label: 'Home',
+      icon: 'home-outline',
+      onPress: () => navigateToTab('Home'),
     },
     {
       label: 'Friends',
       icon: 'people-outline',
-      onPress: () => navigateToTab('Friends'),
+      onPress: () => navigateToScreen('AddFriends'),
     },
     {
       label: 'Groups',
-      icon: 'people-outline',
+      icon: 'layers-outline',
       onPress: () => navigateToTab('Groups'),
+    },
+    {
+      label: 'Insights',
+      icon: 'stats-chart-outline',
+      onPress: () => navigateToTab('Insights'),
     },
     {
       label: 'Activity',
       icon: 'pulse-outline',
       onPress: () => navigateToTab('Activity'),
+    },
+    {
+      label: 'Profile',
+      icon: 'person-outline',
+      onPress: () => navigateToScreen('Profile'),
     },
   ];
 

@@ -120,9 +120,9 @@ const SplitExpenseList = () => {
     const {amount, type} = getAmountDisplay(item);
     const amountColor =
       type === 'positive'
-        ? '#22c55e'
+        ? colors.positive
         : type === 'negative'
-        ? '#ef4444'
+        ? colors.negative
         : themeColors.text;
 
     return (
@@ -174,10 +174,10 @@ const SplitExpenseList = () => {
               {
                 backgroundColor:
                   item.status === 'settled'
-                    ? '#22c55e20'
+                    ? colors.positive + '20'
                     : item.status === 'partially_settled'
-                    ? '#f59e0b20'
-                    : '#3b82f620',
+                    ? colors.accent + '20'
+                    : colors.primary + '20',
               },
             ]}>
             <AppText
@@ -241,7 +241,7 @@ const SplitExpenseList = () => {
         rightComponent={
           <TouchableOpacity
             style={[localStyles.balanceButton, dynamicStyles.balanceButton]}
-            onPress={() => navigation.navigate('Balances')}>
+            onPress={() => navigation.navigate('Home')}>
             <Icon name="scale-balance" size={18} color={colors.primary} />
           </TouchableOpacity>
         }

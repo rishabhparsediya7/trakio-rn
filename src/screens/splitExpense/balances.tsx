@@ -67,7 +67,7 @@ const BalancesScreen = () => {
           <Icon
             name="account-circle"
             size={48}
-            color={isPositive ? '#22c55e' : '#ef4444'}
+            color={isPositive ? colors.positive : colors.negative}
           />
         </View>
         <View style={styles.balanceInfo}>
@@ -77,7 +77,7 @@ const BalancesScreen = () => {
           <Text
             style={[
               styles.balanceText,
-              {color: isPositive ? '#22c55e' : '#ef4444'},
+              {color: isPositive ? colors.positive : colors.negative},
             ]}>
             {isPositive ? 'owes you' : 'you owe'}
           </Text>
@@ -86,10 +86,10 @@ const BalancesScreen = () => {
           <RupeeIcon
             amount={displayAmount}
             size={18}
-            color={isPositive ? '#22c55e' : '#ef4444'}
+            color={isPositive ? colors.positive : colors.negative}
             textStyle={{
               fontWeight: 'bold',
-              color: isPositive ? '#22c55e' : '#ef4444',
+              color: isPositive ? colors.positive : colors.negative,
             }}
           />
         </View>
@@ -308,14 +308,14 @@ const BalancesScreen = () => {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>You owe</Text>
-              <Text style={[styles.summaryAmount, {color: '#ef4444'}]}>
+              <Text style={[styles.summaryAmount, {color: colors.negative}]}>
                 ₹{summary.youOwe.toFixed(2)}
               </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>You are owed</Text>
-              <Text style={[styles.summaryAmount, {color: '#22c55e'}]}>
+              <Text style={[styles.summaryAmount, {color: colors.positive}]}>
                 ₹{summary.youAreOwed.toFixed(2)}
               </Text>
             </View>
@@ -326,7 +326,7 @@ const BalancesScreen = () => {
               style={[
                 styles.netBalanceAmount,
                 {
-                  color: summary.netBalance >= 0 ? '#22c55e' : '#ef4444',
+                  color: summary.netBalance >= 0 ? colors.positive : colors.negative,
                 },
               ]}>
               {summary.netBalance >= 0 ? '+' : '-'}₹

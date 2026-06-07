@@ -118,7 +118,7 @@ const SettlementScreen = () => {
     owedAmount: {
       fontSize: 32,
       fontWeight: 'bold',
-      color: '#ef4444',
+      color: colors.negative,
       marginTop: 4,
       ...commonStyles.textDefault,
     },
@@ -178,7 +178,7 @@ const SettlementScreen = () => {
       ...commonStyles.textDefault,
     },
     settleButton: {
-      backgroundColor: '#22c55e',
+      backgroundColor: colors.positive,
       borderRadius: 12,
       padding: 18,
       alignItems: 'center',

@@ -7,10 +7,13 @@ import { useMemo } from 'react';
 import {useHomeStore} from '../../../store';
 
 const routeIcons: { [key: string]: { default: string; focused: string } } = {
+    Home: { default: 'home-outline', focused: 'home' },
+    Groups: { default: 'layers-outline', focused: 'layers' },
+    Insights: { default: 'stats-chart-outline', focused: 'stats-chart' },
+    Activity: { default: 'pulse-outline', focused: 'pulse' },
+    // Legacy names kept for safety during transition
     Balances: { default: 'wallet-outline', focused: 'wallet' },
     Friends: { default: 'people-outline', focused: 'people' },
-    Groups: { default: 'layers-outline', focused: 'layers' },
-    Activity: { default: 'pulse-outline', focused: 'pulse' },
     Profile: { default: 'person-outline', focused: 'person' },
 };
 
@@ -99,7 +102,7 @@ const TabButton = (props: Props) => {
             minWidth: 16,
             height: 16,
             borderRadius: 8,
-            backgroundColor: '#FF3B30',
+            backgroundColor: colors.error,
             alignItems: 'center',
             justifyContent: 'center',
             paddingHorizontal: 4,
