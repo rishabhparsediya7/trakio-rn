@@ -1,7 +1,14 @@
-import {useNavigation, useRoute} from '@react-navigation/native';
-import React, {useEffect, useMemo, useState} from 'react';
+import AppText from '@atoms/AppText';
+import Button from '@atoms/Button';
+import RupeeIcon from '@atoms/rupeeIcon';
+import AppInput from '@molecules/AppInput';
+import FriendSelector, {
+  FriendItem,
+} from '@organisms/friendSelector/FriendSelector';
+import Header from '@organisms/Header';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -10,27 +17,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Button from '@atoms/Button';
-import CategorySelector from '@organisms/categorySelector';
-import AppInput from '@molecules/AppInput';
-import AppText from '@atoms/AppText';
-import FriendSelector, {
-  FriendItem,
-} from '@organisms/friendSelector/FriendSelector';
-import Header from '@organisms/Header';
-import RupeeIcon from '@atoms/rupeeIcon';
-import {category as expenseCategories} from '../../constants';
-import {useAuth} from '../../providers/AuthProvider';
-import {darkTheme, lightTheme} from '../../providers/Theme';
-import {useTheme} from '../../providers/ThemeContext';
+import { useAuth } from '../../providers/AuthProvider';
+import { darkTheme, lightTheme } from '../../providers/Theme';
+import { useTheme } from '../../providers/ThemeContext';
 import splitExpenseApi from '../../services/splitExpenseApi';
-import {formatDate} from '../../utils/formatDate';
-import {commonStyles} from '../../utils/styles';
+import { formatDate } from '../../utils/formatDate';
+import { commonStyles } from '../../utils/styles';
 
 interface SelectedFriend extends FriendItem {
   amountOwed: number;
@@ -45,7 +42,6 @@ const CreateSplitExpense = () => {
 
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [splitEqually, setSplitEqually] = useState(true);
@@ -54,8 +50,6 @@ const CreateSplitExpense = () => {
 
   const [selectedFriends, setSelectedFriends] = useState<SelectedFriend[]>([]);
   const [submitting, setSubmitting] = useState(false);
-
-  const categories = useMemo(() => expenseCategories, []);
 
   const handleAmountChange = (text: string) => {
     const numericText = text.replace(/[^0-9.]/g, '');
@@ -159,7 +153,6 @@ const CreateSplitExpense = () => {
       const response = await splitExpenseApi.create({
         description,
         totalAmount: parseFloat(totalAmount),
-        category: selectedCategoryId ? Number(selectedCategoryId) : undefined,
         participants,
         expenseDate: expenseDate.toISOString(),
         paidBy: payerId,
@@ -336,18 +329,6 @@ const CreateSplitExpense = () => {
               weight: 'medium',
             }}
           />
-
-          <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
-            Category
-          </AppText>
-          <View style={styles.grid}>
-            <CategorySelector
-              categories={categories}
-              selectedCategory={selectedCategoryId}
-              setSelectedCategory={setSelectedCategoryId}
-              colors={colors}
-            />
-          </View>
 
           <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
             Date
