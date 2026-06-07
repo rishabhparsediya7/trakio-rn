@@ -7,9 +7,11 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import api from '../services/api';
+import {setLogoutHandler} from '../services/authBridge';
 import {
   registerForNotifications,
   unregisterNotifications,
@@ -152,6 +154,7 @@ export default function AuthProvider({children}: PropsWithChildren) {
         await Promise.all([
           AsyncStorage.setItem('userId', result.userId),
           AsyncStorage.setItem('token', result.token),
+          AsyncStorage.setItem('refreshToken', result.refreshToken || ''),
         ]);
         setUser({
           userId: result?.userId || '',
@@ -200,6 +203,7 @@ export default function AuthProvider({children}: PropsWithChildren) {
         await Promise.all([
           AsyncStorage.setItem('userId', userId),
           AsyncStorage.setItem('token', token),
+          AsyncStorage.setItem('refreshToken', result.refreshToken || ''),
         ]);
         setIsAuthenticated(true);
         setUser({
@@ -245,6 +249,7 @@ export default function AuthProvider({children}: PropsWithChildren) {
         await Promise.all([
           AsyncStorage.setItem('userId', userId),
           AsyncStorage.setItem('token', token),
+          AsyncStorage.setItem('refreshToken', result.refreshToken || ''),
         ]);
         setIsAuthenticated(true);
         setUser({
@@ -348,6 +353,19 @@ export default function AuthProvider({children}: PropsWithChildren) {
 
   const signIn = async () => setIsAuthenticated(true);
   const signOut = async () => {
+    // Revoke the refresh token server-side (best-effort) before clearing state.
+    try {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (refreshToken) {
+        await fetch(`${BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({refreshToken}),
+        });
+      }
+    } catch (e) {
+      // Ignore — proceed with local logout regardless.
+    }
     // Unregister notifications before clearing state
     if (user.userId) {
       await unregisterNotifications(user.userId);
@@ -374,6 +392,16 @@ export default function AuthProvider({children}: PropsWithChildren) {
       userLoginProvider: '',
     });
   };
+
+  // Let the axios layer end the session when a token refresh ultimately fails.
+  const signOutRef = useRef(signOut);
+  signOutRef.current = signOut;
+  useEffect(() => {
+    setLogoutHandler(() => {
+      signOutRef.current();
+    });
+    return () => setLogoutHandler(null);
+  }, []);
 
   return (
     <AuthContext.Provider
