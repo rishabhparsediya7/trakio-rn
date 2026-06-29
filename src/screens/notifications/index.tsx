@@ -163,6 +163,7 @@ const ActivityScreen = () => {
         (notificationResponse.data?.unreadCount || 0) +
         (unreadActivityRes.data?.data?.count || 0);
 
+      console.log('mergedItems', mergedItems);
       setItems(mergedItems);
       setUnreadNotifications(totalUnread);
     } catch (error) {
@@ -385,10 +386,13 @@ const ActivityScreen = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => {
-              setRefreshing(true);
-              fetchActivity();
-            }} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchActivity();
+              }}
+            />
           }
           ListEmptyComponent={
             <View style={styles.centerContainer}>
@@ -400,8 +404,11 @@ const ActivityScreen = () => {
               <AppText variant="h6" weight="semiBold" style={styles.emptyTitle}>
                 No activity yet
               </AppText>
-              <AppText variant="md" style={{color: colors.mutedText, textAlign: 'center'}}>
-                Splits, settlements, group updates, and alerts will all show up here.
+              <AppText
+                variant="md"
+                style={{color: colors.mutedText, textAlign: 'center'}}>
+                Splits, settlements, group updates, and alerts will all show up
+                here.
               </AppText>
             </View>
           }

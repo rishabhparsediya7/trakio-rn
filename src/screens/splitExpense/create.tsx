@@ -1,13 +1,10 @@
 import AppText from '@atoms/AppText';
 import Button from '@atoms/Button';
 import RupeeIcon from '@atoms/rupeeIcon';
-import AppInput from '@molecules/AppInput';
-import FriendSelector, {
-  FriendItem,
-} from '@organisms/friendSelector/FriendSelector';
+import {FriendItem} from '@organisms/friendSelector/FriendSelector';
 import Header from '@organisms/Header';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState } from 'react';
+import {useNavigation} from '@react-navigation/native';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,17 +14,20 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useAuth } from '../../providers/AuthProvider';
-import { darkTheme, lightTheme } from '../../providers/Theme';
-import { useTheme } from '../../providers/ThemeContext';
+import {useAuth} from '../../providers/AuthProvider';
+import {darkTheme, lightTheme} from '../../providers/Theme';
+import {useTheme} from '../../providers/ThemeContext';
 import splitExpenseApi from '../../services/splitExpenseApi';
-import { formatDate } from '../../utils/formatDate';
-import { commonStyles } from '../../utils/styles';
+import {formatDate} from '../../utils/formatDate';
+import {commonStyles} from '../../utils/styles';
+import PaidBySheet from './components/PaidBySheet';
+import PeoplePickerSheet from './components/PeoplePickerSheet';
+import SplitMethodSheet, {SplitMode} from './components/SplitMethodSheet';
 
 interface SelectedFriend extends FriendItem {
   amountOwed: number;
@@ -35,7 +35,6 @@ interface SelectedFriend extends FriendItem {
 
 const CreateSplitExpense = () => {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
   const {theme} = useTheme();
   const {user: authUser} = useAuth();
   const colors = theme === 'dark' ? darkTheme : lightTheme;
@@ -44,12 +43,28 @@ const CreateSplitExpense = () => {
   const [totalAmount, setTotalAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [splitEqually, setSplitEqually] = useState(true);
-  const [paidByMe, setPaidByMe] = useState(true);
+  const [splitMode, setSplitMode] = useState<SplitMode>('equally');
+  const [paidById, setPaidById] = useState(authUser.userId);
   const [inputWidth, setInputWidth] = useState(30);
 
   const [selectedFriends, setSelectedFriends] = useState<SelectedFriend[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const [peopleSheet, setPeopleSheet] = useState(false);
+  const [paidBySheet, setPaidBySheet] = useState(false);
+  const [splitSheet, setSplitSheet] = useState(false);
+
+  const total = parseFloat(totalAmount) || 0;
+  const friendsSum = selectedFriends.reduce(
+    (sum, f) => sum + (f.amountOwed || 0),
+    0,
+  );
+  const youShare = Math.round((total - friendsSum) * 100) / 100;
+
+  const payerName =
+    paidById === authUser.userId
+      ? 'You'
+      : selectedFriends.find(f => f.id === paidById)?.firstName || 'You';
 
   const handleAmountChange = (text: string) => {
     const numericText = text.replace(/[^0-9.]/g, '');
@@ -65,18 +80,26 @@ const CreateSplitExpense = () => {
     setTotalAmount(sanitized);
   };
 
+  // Recompute equal shares when amount / people / mode change.
   useEffect(() => {
-    if (splitEqually && selectedFriends.length > 0 && totalAmount) {
-      const amountValue = parseFloat(totalAmount);
-      const perPerson = amountValue / (selectedFriends.length + 1);
-      setSelectedFriends(
-        selectedFriends.map(f => ({
-          ...f,
-          amountOwed: Math.round(perPerson * 100) / 100,
-        })),
+    if (splitMode === 'equally' && selectedFriends.length > 0 && totalAmount) {
+      const perPerson = parseFloat(totalAmount) / (selectedFriends.length + 1);
+      setSelectedFriends(prev =>
+        prev.map(f => ({...f, amountOwed: Math.round(perPerson * 100) / 100})),
       );
     }
-  }, [totalAmount, splitEqually, selectedFriends.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAmount, splitMode, selectedFriends.length]);
+
+  // If the chosen payer leaves the split, fall back to You.
+  useEffect(() => {
+    if (
+      paidById !== authUser.userId &&
+      !selectedFriends.some(f => f.id === paidById)
+    ) {
+      setPaidById(authUser.userId);
+    }
+  }, [selectedFriends, paidById, authUser.userId]);
 
   const onDateConfirm = (date: Date) => {
     setExpenseDate(date);
@@ -89,7 +112,7 @@ const CreateSplitExpense = () => {
       setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id));
     } else {
       const amount =
-        splitEqually && totalAmount
+        splitMode === 'equally' && totalAmount
           ? parseFloat(totalAmount) / (selectedFriends.length + 2)
           : 0;
       setSelectedFriends([
@@ -112,58 +135,39 @@ const CreateSplitExpense = () => {
       Alert.alert('Error', 'Please enter a description');
       return;
     }
-    if (!totalAmount || parseFloat(totalAmount) <= 0) {
+    if (total <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
     if (selectedFriends.length === 0) {
-      Alert.alert('Error', 'Please select at least one friend to split with');
+      Alert.alert('Error', 'Please add at least one person to split with');
       return;
     }
 
     setSubmitting(true);
     try {
-      const payerId = paidByMe ? authUser.userId : selectedFriends[0].id;
       const participants = [
+        {userId: authUser.userId, amountOwed: youShare},
         ...selectedFriends.map(f => ({
           userId: f.id,
           amountOwed: f.amountOwed,
         })),
-        ...(paidByMe
-          ? []
-          : [
-              {
-                userId: authUser.userId,
-                amountOwed:
-                  parseFloat(totalAmount) -
-                  selectedFriends.reduce((sum, f) => sum + f.amountOwed, 0),
-              },
-            ]),
       ];
-
-      if (paidByMe) {
-        participants.push({
-          userId: authUser.userId,
-          amountOwed:
-            parseFloat(totalAmount) -
-            selectedFriends.reduce((sum, f) => sum + f.amountOwed, 0),
-        });
-      }
 
       const response = await splitExpenseApi.create({
         description,
-        totalAmount: parseFloat(totalAmount),
+        totalAmount: total,
         participants,
         expenseDate: expenseDate.toISOString(),
-        paidBy: payerId,
+        paidBy: paidById,
       });
 
       if (response.data.success) {
-        Alert.alert('Success', 'Split expense created!', [
+        Alert.alert('Success', 'Split created!', [
           {text: 'OK', onPress: () => navigation.goBack()},
         ]);
       } else {
-        Alert.alert('Error', 'Failed to create split expense');
+        Alert.alert('Error', 'Failed to create split');
       }
     } catch (error) {
       console.error('Error creating split expense:', error);
@@ -173,124 +177,115 @@ const CreateSplitExpense = () => {
     }
   };
 
+  const payerOptions = useMemo(
+    () => [
+      {id: authUser.userId, name: 'You'},
+      ...selectedFriends.map(f => ({
+        id: f.id,
+        name: `${f.firstName} ${f.lastName}`.trim(),
+      })),
+    ],
+    [authUser.userId, selectedFriends],
+  );
+
+  const isDisabled =
+    submitting || selectedFriends.length === 0 || total <= 0 || !description.trim();
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: {
-          flex: 1,
-          backgroundColor: colors.background,
+        container: {flex: 1, backgroundColor: colors.background},
+        scrollContent: {paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40},
+        label: {marginBottom: 10, color: colors.mutedText},
+        chipsRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+        chip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 20,
+          backgroundColor: colors.primary + '18',
         },
-        scrollContent: {
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          paddingBottom: 40,
-        },
-        sectionTitle: {
-          marginBottom: 12,
-          marginTop: 24,
+        chipYou: {backgroundColor: colors.inputBackground},
+        chipText: {color: colors.text, fontSize: 14},
+        addChip: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: colors.primary,
+          borderStyle: 'dashed',
         },
         amountRow: {
           alignItems: 'center',
           flexDirection: 'row',
           justifyContent: 'center',
-          backgroundColor: colors.inputBackground,
-          borderRadius: 12,
+          marginTop: 28,
           marginBottom: 8,
-          width: '100%',
         },
+        rupee: {fontSize: 36, ...commonStyles.textDefault, color: colors.text},
         amountInput: {
-          padding: 16,
-          borderRadius: 12,
-          color: colors.inputText,
-          fontSize: 32,
-          fontWeight: '600',
+          color: colors.text,
+          fontSize: 40,
+          fontWeight: '700',
+          textAlign: 'center',
+          padding: 0,
         },
-        rupee: {
-          fontSize: 32,
-          ...commonStyles.textDefault,
-          color: colors.buttonText,
+        descriptionInput: {
+          color: colors.text,
+          fontSize: 16,
+          textAlign: 'center',
+          marginBottom: 8,
+          paddingVertical: 8,
         },
-        grid: {
+        summaryLine: {
           flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          marginTop: 20,
           flexWrap: 'wrap',
+        },
+        summarySegment: {
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          borderRadius: 10,
+          backgroundColor: colors.inputBackground,
+        },
+        summaryText: {color: colors.text, fontSize: 15},
+        summaryStrong: {color: colors.primary, fontWeight: '700'},
+        preview: {
+          marginTop: 16,
+          backgroundColor: colors.cardBackground,
+          borderRadius: 14,
+          padding: 14,
+          gap: 10,
+        },
+        previewRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
           justifyContent: 'space-between',
         },
-        dateBox: {
+        previewName: {color: colors.text},
+        dateRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.inputBackground,
-          padding: 16,
-          borderRadius: 12,
-        },
-        dateText: {
-          marginLeft: 8,
-          fontSize: 14,
-          color: colors.buttonText,
-        },
-        toggleContainer: {
-          flexDirection: 'row',
-          backgroundColor: colors.inputBackground,
-          borderRadius: 12,
-          padding: 4,
-        },
-        toggleButton: {
-          flex: 1,
+          gap: 8,
+          marginTop: 20,
           paddingVertical: 12,
-          borderRadius: 10,
-          alignItems: 'center',
         },
-        friendsContainer: {
-          backgroundColor: colors.inputBackground,
-          borderRadius: 12,
-          overflow: 'hidden',
-        },
-        selectedFriend: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          padding: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        },
-        friendInfo: {
-          flex: 1,
-          marginLeft: 12,
-        },
-        friendAmountInput: {
-          backgroundColor: colors.background,
-          borderRadius: 8,
-          padding: 8,
-          width: 80,
-          textAlign: 'center',
-          color: colors.text,
-          fontSize: 14,
-        },
-        removeButton: {
-          padding: 8,
-        },
-        submitButton: {
-          marginTop: 32,
-        },
+        dateText: {color: colors.text, fontSize: 14},
+        submitButton: {marginTop: 28},
       }),
-    [colors, theme],
+    [colors],
   );
-
-  const isDisabled = useMemo(() => {
-    return (
-      submitting ||
-      selectedFriends.length === 0 ||
-      !totalAmount ||
-      parseFloat(totalAmount) <= 0 ||
-      !description.trim()
-    );
-  }, [submitting, selectedFriends.length, totalAmount, description]);
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Create Split"
-        showBackButton
-        onBackPress={() => navigation.goBack()}
-      />
+      <Header title="New Split" showBackButton onBackPress={() => navigation.goBack()} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -298,146 +293,129 @@ const CreateSplitExpense = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
-            Total Amount
+          {/* With — people first */}
+          <AppText variant="caption" weight="semiBold" style={styles.label}>
+            WITH
           </AppText>
-          <View style={styles.amountRow}>
-            <View style={styles.amountRow}>
-              <Text style={styles.rupee}>
-                <Icon name="rupee" size={32} color={colors.buttonText} />
-              </Text>
-              <TextInput
-                placeholder="0.00"
-                placeholderTextColor={colors.inputText + '80'}
-                value={totalAmount}
-                keyboardType="numeric"
-                onChangeText={handleAmountChange}
-                style={[styles.amountInput, {width: `${inputWidth}%`}]}
-              />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}>
+            <View style={[styles.chip, styles.chipYou]}>
+              <MaterialIcon name="account" size={16} color={colors.text} />
+              <Text style={styles.chipText}>You</Text>
             </View>
-          </View>
-
-          <AppInput
-            containerStyle={{marginTop: 24}}
-            label="Expense Title"
-            placeholder="What did you spend on?"
-            value={description}
-            onChangeText={setDescription}
-            labelProps={{
-              variant: 'h6',
-              weight: 'medium',
-            }}
-          />
-
-          <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
-            Date
-          </AppText>
-          <TouchableOpacity
-            onPress={() => setDatePickerVisibility(true)}
-            style={styles.dateBox}>
-            <MaterialIcon name="calendar" size={24} color={colors.buttonText} />
-            <AppText variant="md" style={styles.dateText}>
-              {formatDate(expenseDate.toString())}
-            </AppText>
-          </TouchableOpacity>
-
-          <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
-            Paid by
-          </AppText>
-          <View style={styles.toggleContainer}>
-            <Button
-              variant={paidByMe ? 'primary' : 'ghost'}
-              title="You"
-              onPress={() => setPaidByMe(true)}
-              style={styles.toggleButton}
-              textStyle={{fontSize: 14}}
-            />
-            <Button
-              variant={!paidByMe ? 'primary' : 'ghost'}
-              title="Someone else"
-              onPress={() => setPaidByMe(false)}
-              style={styles.toggleButton}
-              textStyle={{fontSize: 14}}
-            />
-          </View>
-
-          <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
-            Split type
-          </AppText>
-          <View style={styles.toggleContainer}>
-            <Button
-              variant={splitEqually ? 'primary' : 'ghost'}
-              title="Equal"
-              onPress={() => setSplitEqually(true)}
-              style={styles.toggleButton}
-              textStyle={{fontSize: 14}}
-            />
-            <Button
-              variant={!splitEqually ? 'primary' : 'ghost'}
-              title="Custom"
-              onPress={() => setSplitEqually(false)}
-              style={styles.toggleButton}
-              textStyle={{fontSize: 14}}
-            />
-          </View>
-
-          <AppText variant="h6" weight="medium" style={styles.sectionTitle}>
-            Split with
-          </AppText>
-          <View style={styles.friendsContainer}>
             {selectedFriends.map(friend => (
-              <View key={friend.id} style={styles.selectedFriend}>
-                <MaterialIcon
-                  name="account-circle"
-                  size={40}
-                  color={colors.mutedText}
-                />
-                <View style={styles.friendInfo}>
-                  <AppText weight="medium">
-                    {friend.firstName} {friend.lastName}
-                  </AppText>
-                </View>
-                {!splitEqually ? (
-                  <TextInput
-                    style={styles.friendAmountInput}
-                    placeholder="0"
-                    keyboardType="numeric"
-                    value={friend.amountOwed.toString()}
-                    onChangeText={val => updateIndividualAmount(friend.id, val)}
-                  />
-                ) : (
-                  <RupeeIcon
-                    amount={friend.amountOwed}
-                    size={14}
+              <TouchableOpacity
+                key={friend.id}
+                style={styles.chip}
+                onPress={() => handleToggleFriend(friend)}>
+                <Text style={styles.chipText}>{friend.firstName}</Text>
+                {friend.isPlaceholder && (
+                  <MaterialIcon
+                    name="email-outline"
+                    size={12}
                     color={colors.primary}
                   />
                 )}
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleToggleFriend(friend)}>
-                  <MaterialIcon name="close-circle" size={24} color={colors.negative} />
-                </TouchableOpacity>
-              </View>
+                <MaterialIcon name="close" size={14} color={colors.primary} />
+              </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={styles.addChip}
+              onPress={() => setPeopleSheet(true)}>
+              <MaterialIcon name="plus" size={22} color={colors.primary} />
+            </TouchableOpacity>
+          </ScrollView>
+
+          {/* Hero amount */}
+          <View style={styles.amountRow}>
+            <Text style={styles.rupee}>
+              <Icon name="rupee" size={34} color={colors.text} />
+            </Text>
+            <TextInput
+              placeholder="0"
+              placeholderTextColor={colors.mutedText}
+              value={totalAmount}
+              keyboardType="numeric"
+              onChangeText={handleAmountChange}
+              style={[styles.amountInput, {minWidth: 60, width: `${inputWidth}%`}]}
+            />
           </View>
 
-          <FriendSelector
-            selectedFriends={selectedFriends}
-            onToggleFriend={handleToggleFriend}
-            showGlobalSearch={true}
-            placeholder="Search friends..."
-            showSelectedChips={false}
+          {/* Description */}
+          <TextInput
+            placeholder="What was it for?"
+            placeholderTextColor={colors.mutedText}
+            value={description}
+            onChangeText={setDescription}
+            style={styles.descriptionInput}
           />
 
+          {/* Natural-language summary line */}
+          <View style={styles.summaryLine}>
+            <TouchableOpacity
+              style={styles.summarySegment}
+              onPress={() => setPaidBySheet(true)}>
+              <Text style={styles.summaryText}>
+                Paid by <Text style={styles.summaryStrong}>{payerName}</Text>
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.summarySegment}
+              onPress={() => setSplitSheet(true)}>
+              <Text style={styles.summaryText}>
+                split{' '}
+                <Text style={styles.summaryStrong}>
+                  {splitMode === 'equally' ? 'equally' : 'unequally'}
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Live split preview */}
+          {selectedFriends.length > 0 && total > 0 && (
+            <View style={styles.preview}>
+              <View style={styles.previewRow}>
+                <AppText style={styles.previewName}>You</AppText>
+                <RupeeIcon amount={youShare} size={14} color={colors.text} />
+              </View>
+              {selectedFriends.map(f => (
+                <View key={f.id} style={styles.previewRow}>
+                  <AppText style={styles.previewName}>
+                    {f.firstName} {f.lastName}
+                  </AppText>
+                  <RupeeIcon
+                    amount={f.amountOwed}
+                    size={14}
+                    color={colors.text}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Date */}
+          <TouchableOpacity
+            onPress={() => setDatePickerVisibility(true)}
+            style={styles.dateRow}>
+            <MaterialIcon name="calendar" size={20} color={colors.mutedText} />
+            <Text style={styles.dateText}>
+              {formatDate(expenseDate.toString())}
+            </Text>
+          </TouchableOpacity>
+
           <Button
-            title="Create Split Expense"
+            title="Create split"
             onPress={handleCreateSplitExpense}
             loading={submitting}
             disabled={isDisabled}
             style={styles.submitButton}
           />
         </ScrollView>
+
         <DateTimePickerModal
           isVisible={isDatePickerVisible}
           mode="date"
@@ -446,6 +424,30 @@ const CreateSplitExpense = () => {
           locale="en-IN"
         />
       </KeyboardAvoidingView>
+
+      <PeoplePickerSheet
+        visible={peopleSheet}
+        onClose={() => setPeopleSheet(false)}
+        selectedFriends={selectedFriends}
+        onToggleFriend={handleToggleFriend}
+      />
+      <PaidBySheet
+        visible={paidBySheet}
+        onClose={() => setPaidBySheet(false)}
+        participants={payerOptions}
+        paidById={paidById}
+        onSelect={setPaidById}
+      />
+      <SplitMethodSheet
+        visible={splitSheet}
+        onClose={() => setSplitSheet(false)}
+        mode={splitMode}
+        onModeChange={setSplitMode}
+        total={total}
+        youShare={youShare}
+        friends={selectedFriends}
+        onUpdateFriendAmount={updateIndividualAmount}
+      />
     </View>
   );
 };

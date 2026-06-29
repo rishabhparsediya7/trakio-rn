@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import IonIcon from 'react-native-vector-icons/Ionicons';
 import Header from '@organisms/Header';
 import {useTheme} from '../../providers/ThemeContext';
 import {darkTheme, lightTheme} from '../../providers/Theme';
@@ -278,28 +279,28 @@ const BalancesScreen = () => {
   return (
     <View style={styles.container}>
       <Header
-        title="Balances"
+        title="Home"
         showBackButton={navigation.canGoBack()}
         showDrawerButton={!navigation.canGoBack()}
         onBackPress={() => navigation.canGoBack() && navigation.goBack()}
-        rightComponent={
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={[styles.headerBtn, {backgroundColor: colors.primary + '15'}]}
-              onPress={() => navigation.navigate('SplitExpenseList')}>
-              <Icon
-                name="format-list-bulleted"
-                size={20}
-                color={colors.primary}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerBtn, {backgroundColor: colors.primary}]}
-              onPress={() => navigation.navigate('CreateSplitExpense')}>
-              <Icon name="plus" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        }
+        // rightComponent={
+        //   <View style={styles.headerActions}>
+        //     <TouchableOpacity
+        //       style={[styles.headerBtn, {backgroundColor: colors.primary + '15'}]}
+        //       onPress={() => navigation.navigate('SplitExpenseList')}>
+        //       <Icon
+        //         name="format-list-bulleted"
+        //         size={20}
+        //         color={colors.primary}
+        //       />
+        //     </TouchableOpacity>
+        //     <TouchableOpacity
+        //       style={[styles.headerBtn, {backgroundColor: colors.primary}]}
+        //       onPress={() => navigation.navigate('CreateSplitExpense')}>
+        //       <Icon name="plus" size={20} color="#fff" />
+        //     </TouchableOpacity>
+        //   </View>
+        // }
       />
 
       {/* Summary Card */}
@@ -348,7 +349,7 @@ const BalancesScreen = () => {
               {backgroundColor: colors.cardBackground, borderColor: colors.border},
             ]}
             onPress={() => navigation.navigate('SplitExpenseList')}>
-            <Icon name="receipt-text-outline" size={18} color={colors.text} />
+            <IonIcon name="people-sharp" size={18} color={colors.text} />
             <Text style={[styles.quickActionSecondaryText, {color: colors.text}]}>
               Shared Expenses
             </Text>
